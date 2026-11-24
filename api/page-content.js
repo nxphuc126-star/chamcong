@@ -1,14 +1,2 @@
 const {get}=require("@vercel/blob");
-module.exports=async function(req,res){
- if(req.method!=="GET")return res.status(405).json({error:"Method not allowed"});
- try{
-  const item=await get("admin/site-data.json",{access:"private"});
-  if(!item||item.statusCode!==200)return res.status(200).json({});
-  const raw=await new Response(item.stream).text();
-  const data=JSON.parse(raw);
-  return res.status(200).json({pages:data.pages||{},appData:data.appData||null});
- }catch(e){
-  if(e.statusCode===404||e.code==="BLOB_NOT_FOUND")return res.status(200).json({});
-  return res.status(503).json({error:"Không thể tải dữ liệu dùng chung"});
- }
-};
+module.exports=async function(req,res){if(req.method!=="GET")return res.status(405).json({error:"Method not allowed"});try{const item=await get("admin/site-data.json",{access:"private"});if(!item||item.statusCode!==200)return res.status(200).json({});const raw=await new Response(item.stream).text();const d=JSON.parse(raw);return res.status(200).json({pages:d.pages||{},appData:d.appData||null,employees:Array.isArray(d.employees)?d.employees:[]})}catch(e){if(e.statusCode===404||e.code==="BLOB_NOT_FOUND")return res.status(200).json({});return res.status(503).json({error:"Không thể tải dữ liệu dùng chung"})}};
