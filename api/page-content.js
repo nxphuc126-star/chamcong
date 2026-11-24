@@ -1,10 +1,14 @@
+const {get}=require("@vercel/blob");
 module.exports=async function(req,res){
  if(req.method!=="GET")return res.status(405).json({error:"Method not allowed"});
  try{
-  const base=process.env.KV_REST_API_URL,token=process.env.KV_REST_API_TOKEN;
-  if(!base||!token)return res.status(200).json({});
-  const r=await fetch(base.replace(/\/$/,"")+"/GET/"+encodeURIComponent("chamcong:admin:page-content"),{headers:{Authorization:"Bearer "+token}});
-  if(!r.ok)return res.status(200).json({});
-  const j=await r.json();return res.status(200).json(j.result?JSON.parse(j.result):{});
- }catch(e){return res.status(200).json({})}
+  const item=await get("admin/site-data.json",{access:"private"});
+  if(!item||item.statusCode!==200)return res.status(200).json({});
+  const raw=await new Response(item.stream).text();
+  const data=JSON.parse(raw);
+  return res.status(200).json({pages:data.pages||{},appData:data.appData||null});
+ }catch(e){
+  if(e.statusCode===404||e.code==="BLOB_NOT_FOUND")return res.status(200).json({});
+  return res.status(503).json({error:"Không thể tải dữ liệu dùng chung"});
+ }
 };
