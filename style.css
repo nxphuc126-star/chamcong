@@ -273,3 +273,5 @@ main { view-transition-name: app-page-content; }
 .employee-field b{color:var(--muted,#94a3b8);font-weight:600;max-width:58%}
 .employee-field span{text-align:right;overflow-wrap:anywhere}
 @media(max-width:650px){.employee-details{grid-template-columns:1fr;min-width:260px}}
+
+.admin-page-notice{margin:0 0 16px;padding:13px 16px;border:1px solid #bfd2fa;border-left:4px solid #2456c7;border-radius:10px;background:#eef4ff;color:#193b78;white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.6}
