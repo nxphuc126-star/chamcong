@@ -222,12 +222,24 @@ function renderEdit(){
 }
 
 
-/* ---------- employee directory import ---------- */
+/* ---------- employee directory: import every populated column ---------- */
 function excelDate(v){
   if(v instanceof Date&&!isNaN(v))return v.toLocaleDateString('vi-VN');
-  if(typeof v==='number'&&typeof XLSX!=='undefined'){const d=XLSX.SSF.parse_date_code(v);if(d)return String(d.d).padStart(2,'0')+'/'+String(d.m).padStart(2,'0')+'/'+d.y}
-  if(v)return String(v).trim();
-  return '';
+  if(typeof v==='number'&&typeof XLSX!=='undefined'){
+    const d=XLSX.SSF.parse_date_code(v);
+    if(d)return String(d.d).padStart(2,'0')+'/'+String(d.m).padStart(2,'0')+'/'+d.y;
+  }
+  return v==null?'':String(v).trim();
+}
+function employeeColumnName(aoa,col){
+  const parts=[];
+  for(let r=2;r<=5;r++){
+    let v=aoa[r]?.[col];
+    if(v instanceof Date)v=v.toLocaleDateString('vi-VN');
+    if(v!==undefined&&v!==null&&String(v).trim()&&!parts.includes(String(v).trim()))parts.push(String(v).trim());
+  }
+  if(!parts.length)parts.push('Cột '+(col+1));
+  return parts.join(' · ');
 }
 function importEmployeeFile(file){
   if(typeof XLSX==='undefined'){toast('Không tải được thư viện Excel');return}
@@ -243,27 +255,42 @@ function importEmployeeFile(file){
         if(row.includes('mnv')&&row.includes('ten')){head=i;break}
       }
       if(head<0)throw new Error('Không tìm thấy hàng tiêu đề MNV và Tên');
-      const idx={};aoa[head].forEach((v,i)=>{const k=norm(v);if(k)idx[k]=i});
-      const get=(r,k)=>r[idx[k]]??'';
+      const headers=Array.from({length:Math.max(...aoa.map(r=>r.length))},(_,col)=>employeeColumnName(aoa,col));
+      const used={};
+      const uniqueHeaders=headers.map((name,i)=>{
+        const n=(used[name]||0)+1;used[name]=n;
+        return n>1?name+' ('+n+')':name;
+      });
+      const headerRow=aoa[head].map(v=>norm(v));
+      const colOf=(name)=>headerRow.findIndex(v=>v===name);
+      const idCol=colOf('mnv'),nameCol=colOf('ten');
+      const lineCol=colOf('line'),leaderCol=colOf('leader');
       const clean=[];
       for(let i=head+1;i<aoa.length;i++){
-        const r=aoa[i],code=String(get(r,'mnv')||'').trim(),name=cleanName(get(r,'ten'));
-        if(!/^SD\w+/i.test(code)||!name)continue;
+        const row=aoa[i]||[];
+        const code=String(row[idCol]??'').trim();
+        const name=String(row[nameCol]??'').trim();
+        if(!code||!name||!/^SD\w+/i.test(code))continue;
+        const fields=[];
+        for(let col=0;col<uniqueHeaders.length;col++){
+          const value=row[col];
+          if(value===undefined||value===null||value==='')continue;
+          fields.push({name:uniqueHeaders[col],value:excelDate(value),column:col+1});
+        }
         clean.push({
           id:code,name,
-          line:cleanName(get(r,'line')),
-          leader:cleanName(get(r,'leader')),
-          classification:cleanName(get(r,'phan loai')),
-          type:cleanName(get(r,'loai')),
-          rank:String(get(r,'cap bac')??'').trim(),
-          startDate:excelDate(get(r,'ngay vao'))
+          line:String(row[lineCol]??'').trim(),
+          leader:String(row[leaderCol]??'').trim(),
+          fields
         });
       }
-      if(!clean.length)throw new Error('Không tìm thấy nhân sự hợp lệ (MNV dạng SD...)');
-      const seen=new Set();EMPLOYEES=clean.filter(x=>!seen.has(x.id)&&seen.add(x.id));
+      if(!clean.length)throw new Error('Không tìm thấy dòng nhân sự hợp lệ');
+      const seen=new Set();
+      EMPLOYEES=clean.filter(x=>!seen.has(x.id)&&seen.add(x.id));
       localStorage.setItem(EMPKEY,JSON.stringify(EMPLOYEES));
       renderEmployeeDirectory();
-      toast('Đã nhập '+EMPLOYEES.length+' nhân sự');
+      const totalFields=EMPLOYEES.reduce((n,x)=>n+x.fields.length,0);
+      toast('Đã nhập đủ '+EMPLOYEES.length+' nhân sự và '+totalFields+' ô dữ liệu');
     }catch(err){toast('Lỗi nhập file: '+err.message)}
   };
   fr.readAsArrayBuffer(file);
@@ -272,12 +299,17 @@ function renderEmployeeDirectory(){
   const status=$('#employeeStatus'),count=$('#employeeCount'),table=$('#employeeTbl');
   if(!status||!table)return;
   const q=norm($('#employeeSearch')?.value||'');
-  const list=EMPLOYEES.filter(x=>!q||norm([x.id,x.name,x.line,x.leader,x.classification,x.type].join(' ')).includes(q));
-  status.textContent=EMPLOYEES.length?'Đã lưu '+EMPLOYEES.length+' nhân sự trên trình duyệt này.':'Chưa nhập file nhân sự.';
+  const list=EMPLOYEES.filter(x=>!q||norm([x.id,x.name,x.line,x.leader,...(x.fields||[]).map(f=>f.name+' '+f.value)].join(' ')).includes(q));
+  status.textContent=EMPLOYEES.length?'Đã lưu đầy đủ thông tin của '+EMPLOYEES.length+' nhân sự trên trình duyệt này, gồm cả số điện thoại và dữ liệu chấm công.':'Chưa nhập file nhân sự.';
   count.textContent=EMPLOYEES.length?('Hiển thị '+list.length+'/'+EMPLOYEES.length+' nhân sự'):'';
-  table.innerHTML=EMPLOYEES.length?'<thead><tr><th>Mã NV</th><th class="l">Họ và tên</th><th class="l">Line / Bộ phận</th><th class="l">Leader</th><th class="l">Phân loại</th><th>Loại</th><th>Cấp bậc</th><th>Ngày vào</th></tr></thead><tbody>'+list.map(x=>'<tr><td>'+esc(x.id)+'</td><td class="l">'+esc(x.name)+'</td><td class="l">'+esc(x.line)+'</td><td class="l">'+esc(x.leader)+'</td><td class="l">'+esc(x.classification)+'</td><td>'+esc(x.type)+'</td><td>'+esc(x.rank)+'</td><td>'+esc(x.startDate)+'</td></tr>').join('')+'</tbody>':'<tbody><tr><td class="empty">Chưa có danh sách nhân sự</td></tr></tbody>';
+  const head='<thead><tr><th>Mã NV</th><th class="l">Họ và tên</th><th class="l">Line</th><th class="l">Leader</th><th class="l">SĐT</th><th>Toàn bộ dữ liệu</th></tr></thead>';
+  const body=list.map((x,i)=>{
+    const phone=(x.fields||[]).find(f=>norm(f.name).includes('sdt'));
+    const detail=(x.fields||[]).map(f=>'<div class="employee-field"><b>'+esc(f.name)+'</b><span>'+esc(f.value)+'</span></div>').join('');
+    return '<tr><td>'+esc(x.id)+'</td><td class="l">'+esc(x.name)+'</td><td class="l">'+esc(x.line)+'</td><td class="l">'+esc(x.leader)+'</td><td>'+esc(phone?.value||'')+'</td><td><details><summary>Xem '+(x.fields||[]).length+' trường</summary><div class="employee-details">'+detail+'</div></details></td></tr>';
+  }).join('');
+  table.innerHTML=EMPLOYEES.length?head+'<tbody>'+body+'</tbody>':'<tbody><tr><td class="empty">Chưa có danh sách nhân sự</td></tr></tbody>';
 }
-
 /* ---------- render: step 2 ---------- */
 function kpi(label,val,sub,state){return `<div class="kpi ${state||''}"><span>${label}</span><b>${val}</b>${sub?`<small>${sub}</small>`:''}</div>`}
 function metaLine(){return [S.cur?'Ngày '+dayLabel(S.cur):'','Bộ phận '+($('#rDept').value||'')].filter(Boolean).join(' · ')}
