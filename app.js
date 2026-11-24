@@ -26,6 +26,9 @@ const FIELDS=[['line','Line'],['nLines','Kế hoạch – số line'],['planTT',
 
 /* ---------- state ---------- */
 const KEY='nhan-luc-line-v2';
+const EMPKEY='nhan-luc-line-employees-v1';
+let EMPLOYEES=[];
+try{EMPLOYEES=JSON.parse(localStorage.getItem(EMPKEY)||'[]');if(!Array.isArray(EMPLOYEES))EMPLOYEES=[]}catch(e){EMPLOYEES=[]}
 let S={days:{},cur:null,prod:{},meta:{dept:'ASSY'},sample:false,source:''};
 let RAWS=null;
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
@@ -216,6 +219,63 @@ function renderEdit(){
     NUMK.map(k=>`<td${['nLines','haveTT','attTT','arrTT'].includes(k)?' class="grp"':''}><input id="e-${i}-${k}" data-k="${k}" inputmode="numeric" value="${r[k]??''}" aria-label="${k}"></td>`).join('')+
     TXTK.map(k=>`<td class="grp"><input class="wide" id="e-${i}-${k}" data-k="${k}" value="${esc(one(r[k]))}" aria-label="${k}"></td>`).join('')+
     `<td><button class="del" data-del="${i}" title="Xóa line" aria-label="Xóa line">×</button></td></tr>`).join('')+'</tbody>';
+}
+
+
+/* ---------- employee directory import ---------- */
+function excelDate(v){
+  if(v instanceof Date&&!isNaN(v))return v.toLocaleDateString('vi-VN');
+  if(typeof v==='number'&&typeof XLSX!=='undefined'){const d=XLSX.SSF.parse_date_code(v);if(d)return String(d.d).padStart(2,'0')+'/'+String(d.m).padStart(2,'0')+'/'+d.y}
+  if(v)return String(v).trim();
+  return '';
+}
+function importEmployeeFile(file){
+  if(typeof XLSX==='undefined'){toast('Không tải được thư viện Excel');return}
+  const fr=new FileReader();
+  fr.onload=e=>{
+    try{
+      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array',cellDates:true});
+      const sn=wb.SheetNames.includes('ASSY')?'ASSY':wb.SheetNames[0];
+      const aoa=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true,defval:''});
+      let head=-1;
+      for(let i=0;i<Math.min(aoa.length,20);i++){
+        const row=aoa[i].map(v=>norm(v));
+        if(row.includes('mnv')&&row.includes('ten')){head=i;break}
+      }
+      if(head<0)throw new Error('Không tìm thấy hàng tiêu đề MNV và Tên');
+      const idx={};aoa[head].forEach((v,i)=>{const k=norm(v);if(k)idx[k]=i});
+      const get=(r,k)=>r[idx[k]]??'';
+      const clean=[];
+      for(let i=head+1;i<aoa.length;i++){
+        const r=aoa[i],code=String(get(r,'mnv')||'').trim(),name=cleanName(get(r,'ten'));
+        if(!/^SD\w+/i.test(code)||!name)continue;
+        clean.push({
+          id:code,name,
+          line:cleanName(get(r,'line')),
+          leader:cleanName(get(r,'leader')),
+          classification:cleanName(get(r,'phan loai')),
+          type:cleanName(get(r,'loai')),
+          rank:String(get(r,'cap bac')??'').trim(),
+          startDate:excelDate(get(r,'ngay vao'))
+        });
+      }
+      if(!clean.length)throw new Error('Không tìm thấy nhân sự hợp lệ (MNV dạng SD...)');
+      const seen=new Set();EMPLOYEES=clean.filter(x=>!seen.has(x.id)&&seen.add(x.id));
+      localStorage.setItem(EMPKEY,JSON.stringify(EMPLOYEES));
+      renderEmployeeDirectory();
+      toast('Đã nhập '+EMPLOYEES.length+' nhân sự');
+    }catch(err){toast('Lỗi nhập file: '+err.message)}
+  };
+  fr.readAsArrayBuffer(file);
+}
+function renderEmployeeDirectory(){
+  const status=$('#employeeStatus'),count=$('#employeeCount'),table=$('#employeeTbl');
+  if(!status||!table)return;
+  const q=norm($('#employeeSearch')?.value||'');
+  const list=EMPLOYEES.filter(x=>!q||norm([x.id,x.name,x.line,x.leader,x.classification,x.type].join(' ')).includes(q));
+  status.textContent=EMPLOYEES.length?'Đã lưu '+EMPLOYEES.length+' nhân sự trên trình duyệt này.':'Chưa nhập file nhân sự.';
+  count.textContent=EMPLOYEES.length?('Hiển thị '+list.length+'/'+EMPLOYEES.length+' nhân sự'):'';
+  table.innerHTML=EMPLOYEES.length?'<thead><tr><th>Mã NV</th><th class="l">Họ và tên</th><th class="l">Line / Bộ phận</th><th class="l">Leader</th><th class="l">Phân loại</th><th>Loại</th><th>Cấp bậc</th><th>Ngày vào</th></tr></thead><tbody>'+list.map(x=>'<tr><td>'+esc(x.id)+'</td><td class="l">'+esc(x.name)+'</td><td class="l">'+esc(x.line)+'</td><td class="l">'+esc(x.leader)+'</td><td class="l">'+esc(x.classification)+'</td><td>'+esc(x.type)+'</td><td>'+esc(x.rank)+'</td><td>'+esc(x.startDate)+'</td></tr>').join('')+'</tbody>':'<tbody><tr><td class="empty">Chưa có danh sách nhân sự</td></tr></tbody>';
 }
 
 /* ---------- render: step 2 ---------- */
@@ -409,12 +469,18 @@ $('#btnCopyMx').onclick=()=>copyText(tsvMx());
 $('#btnCopyProd').onclick=()=>copyText(tsvProd());
 $('#rDept').addEventListener('input',()=>{S.meta.dept=$('#rDept').value;save()});
 
+const empInput=$('#employeeImport');
+if(empInput)empInput.addEventListener('change',e=>{const f=e.target.files[0];if(f)importEmployeeFile(f);e.target.value=''});
+const empSearch=$('#employeeSearch');
+if(empSearch)empSearch.addEventListener('input',renderEmployeeDirectory);
+
 /* ---------- boot ---------- */
 if(!load())sample();
 if(S.cur&&!S.days[S.cur])S.cur=dayKeys().pop()||null;
 $('#rDept').value=S.meta.dept||'ASSY';$('#pasteDate').value=isoToday();
 window.__NLL={analyze,extract,findDate,calc,totals};
 const h=(location.hash.match(/^#buoc-([123])$/)||[])[1];
+renderEmployeeDirectory();
 renderAll();go(document.body.dataset.step||h||'1');
 window.addEventListener('hashchange',()=>{const m=(location.hash.match(/^#buoc-([123])$/)||[])[1];if(m&&m!==step)go(m)});
 })();
