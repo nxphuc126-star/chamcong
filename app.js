@@ -510,9 +510,15 @@ if(empSearch)empSearch.addEventListener('input',renderEmployeeDirectory);
 async function loadAdminPageNotice(){
   try{
     const key=({ "1":"attendance","2":"hr","3":"production" })[document.body.dataset.step||"1"];
-    const r=await fetch("/api/page-content");
+    const r=await fetch("/api/page-content",{cache:"no-store"});
     if(!r.ok)return;
-    const data=await r.json(),message=String(data?.[key]?.notice||"").trim();
+    const data=await r.json();
+    if(data?.appData&&typeof data.appData==="object"&&data.appData.days){
+      S=Object.assign({days:{},cur:null,prod:{},meta:{dept:"ASSY"},sample:false,source:""},data.appData);
+      if(S.cur&&!S.days[S.cur])S.cur=dayKeys().pop()||null;
+      save();renderAll();
+    }
+    const message=String(data?.pages?.[key]?.notice||"").trim();
     if(!message)return;
     const host=document.querySelector("main")||document.querySelector(".main");
     if(!host)return;
