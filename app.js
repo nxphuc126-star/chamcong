@@ -506,6 +506,23 @@ if(empInput)empInput.addEventListener('change',e=>{const f=e.target.files[0];if(
 const empSearch=$('#employeeSearch');
 if(empSearch)empSearch.addEventListener('input',renderEmployeeDirectory);
 
+/* ---------- public admin page notices ---------- */
+async function loadAdminPageNotice(){
+  try{
+    const key=({ "1":"attendance","2":"hr","3":"production" })[document.body.dataset.step||"1"];
+    const r=await fetch("/api/page-content");
+    if(!r.ok)return;
+    const data=await r.json(),message=String(data?.[key]?.notice||"").trim();
+    if(!message)return;
+    const host=document.querySelector("main")||document.querySelector(".main");
+    if(!host)return;
+    const box=document.createElement("div");
+    box.className="admin-page-notice";
+    box.textContent=message;
+    host.prepend(box);
+  }catch(e){}
+}
+
 /* ---------- boot ---------- */
 if(!load())sample();
 if(S.cur&&!S.days[S.cur])S.cur=dayKeys().pop()||null;
@@ -514,5 +531,6 @@ window.__NLL={analyze,extract,findDate,calc,totals};
 const h=(location.hash.match(/^#buoc-([123])$/)||[])[1];
 renderEmployeeDirectory();
 renderAll();go(document.body.dataset.step||h||'1');
+loadAdminPageNotice();
 window.addEventListener('hashchange',()=>{const m=(location.hash.match(/^#buoc-([123])$/)||[])[1];if(m&&m!==step)go(m)});
 })();
