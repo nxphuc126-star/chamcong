@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Nhân Lực Line</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="stylesheet" href="./style.css">
+</head>
+<body data-step="3">
+
+<!-- ===== SIDEBAR ===== -->
+<aside class="sidebar" id="appSidebar" aria-label="Điều hướng chính">
+  <div class="logo"><span class="mark" aria-hidden="true">NL</span><div class="logo-copy"><b>Nhân Lực Line</b><small>Điểm danh · Nhân sự · Sản xuất</small></div></div>
+  <button class="nav" type="button" role="tab" id="step1" data-step="1" aria-controls="s1" aria-selected="true" title="Đọc file điểm danh"><span class="n">1</span><span class="nav-label">Đọc file điểm danh</span></button>
+  <button class="nav" type="button" role="tab" id="step2" data-step="2" aria-controls="s2" aria-selected="false" title="Báo cáo nhân sự"><span class="n">2</span><span class="nav-label">Báo cáo nhân sự</span></button>
+  <button class="nav" type="button" role="tab" id="step3" data-step="3" aria-controls="s3" aria-selected="false" title="Báo cáo sản xuất"><span class="n">3</span><span class="nav-label">Báo cáo sản xuất</span></button>
+  <button class="side-toggle" id="sidebarToggle" type="button" aria-expanded="true" aria-controls="appSidebar" aria-label="Thu gọn thanh bên"><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m10 3-5 5 5 5"/></svg><span class="toggle-label">Thu gọn</span></button>
+
+  <div class="side-foot">
+    <label for="daySel">Ngày <select id="daySel"></select></label>
+    <label for="rDept">Bộ phận <input id="rDept" value="ASSY" size="10"></label>
+  </div>
+</aside>
+
+<!-- ===== MAIN ===== -->
+<div class="main">
+  <header class="top">
+    <div class="topin">
+      <div class="brand">
+        <div>
+          <b id="pageTitle">Bước 1 · Đọc file điểm danh</b>
+          <small id="pageSub">Tải file báo cáo sắp xếp nhân lực hàng ngày</small>
+        </div>
+      </div>
+      <div class="meta">
+        <label for="daySelTop">Ngày <select id="daySelTop"></select></label>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- STEP 1 -->
+    <section id="s1" role="tabpanel" aria-labelledby="step1" tabindex="-1">
+      <div>
+        <h2>Bước 1 · Đọc file điểm danh theo line</h2>
+        <p class="sub">Tải file "Báo cáo sắp xếp nhân lực hàng ngày" của tháng. Mỗi sheet ngày (02.11, 03.11 …) được đọc thành một ngày; sheet tuần ẩn (W44…) được bỏ qua.</p>
+      </div>
+      <div class="grid2">
+        <div class="card">
+          <h3>Tải file tháng</h3>
+          <label class="drop" id="drop" for="file">
+            <strong>Kéo thả file vào đây hoặc bấm để chọn</strong>
+            <small>.xlsx · .xls · .csv. Nhận cột: Line, Kế hoạch (số line, TT, GT), Nhân lực có, Đi làm, Line đang sắp xếp (TT, GT), Chi tiết, Ghi chú.</small>
+          </label>
+          <input type="file" id="file" accept=".xlsx,.xls,.xlsm,.csv" hidden>
+        </div>
+        <div class="card">
+          <h3>Hoặc dán một ngày từ Excel</h3>
+          <textarea id="paste" placeholder="Bôi đen bảng của một sheet ngày (gồm 2 dòng tiêu đề) → Ctrl+C → dán vào đây"></textarea>
+          <div class="row">
+            <label class="status" for="pasteDate">Ngày</label><input type="date" id="pasteDate">
+            <button class="btn pri" id="btnPaste">Đọc bảng đã dán</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="head">
+          <div>
+            <h3>Các ngày đã đọc</h3>
+            <div class="status" id="srcStatus"></div>
+          </div>
+          <div class="row">
+            <button class="btn sm" id="btnSample">Nạp dữ liệu mẫu</button>
+            <button class="btn sm ghost" id="btnClear">Xóa tất cả</button>
+          </div>
+        </div>
+        <div class="chips" id="dayChips"></div>
+      </div>
+
+      <div class="card">
+        <div class="head">
+          <div>
+            <h3 id="editTitle">Dữ liệu ngày</h3>
+            <div class="status">Sửa trực tiếp trong ô nếu cần. Các cột thừa/thiếu được tính lại ở Bước 2.</div>
+          </div>
+          <div class="row">
+            <button class="btn sm" id="btnAddRow">+ Thêm line</button>
+            <button class="btn sm ghost" id="btnDelDay">Xóa ngày này</button>
+          </div>
+        </div>
+        <details id="mapBox" hidden>
+          <summary>Kiểm tra / chỉnh cột nhận dạng (áp dụng cho cả file)</summary>
+          <div class="map" id="mapGrid"></div>
+        </details>
+        <div class="tw"><table class="edit" id="editTbl"></table></div>
+        <div class="foot"><button class="btn pri" data-go="2">Tiếp: điền vào báo cáo nhân sự →</button></div>
+      </div>
+    </section>
+
+    <!-- STEP 2 -->
+    <section id="s2" role="tabpanel" aria-labelledby="step2" tabindex="-1" hidden>
+      <div class="head">
+        <div>
+          <h2>Bước 2 · Báo cáo nhân sự theo line</h2>
+          <p class="sub" id="repSub"></p>
+        </div>
+        <div class="row"><button class="btn" id="btnCopyHR">Sao chép báo cáo (dán vào Excel)</button></div>
+      </div>
+      <div class="kpis" id="hrKpis"></div>
+      <div class="card">
+        <div class="tw"><table id="hrTbl"></table></div>
+        <div class="legend">
+          <div><code>Thừa/thiếu so với nhân lực làm</code> = Nhân lực đi làm − Line đang sắp xếp (TT và GT tính riêng)</div>
+          <div><code>Thừa/thiếu so với kế hoạch</code> = Line đang sắp xếp − Nhân lực cần theo kế hoạch</div>
+          <div><code>Tỷ lệ đi làm</code> = Đi làm ÷ Nhân lực có (TT + GT)</div>
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="card">
+          <h3>Thừa / thiếu so với nhân lực làm</h3>
+          <div class="chart" id="hrChart"></div>
+        </div>
+        <div class="card">
+          <h3>Thừa / thiếu so với kế hoạch</h3>
+          <div class="chart" id="hrChart2"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="head">
+          <div>
+            <h3>Tỷ lệ đi làm theo ngày</h3>
+            <div class="status">Đi làm ÷ Nhân lực có (TT + GT) của từng line. Đỏ dưới 90%, vàng dưới 95%. Bấm vào ngày để mở báo cáo ngày đó.</div>
+          </div>
+          <button class="btn sm" id="btnCopyMx">Sao chép bảng</button>
+        </div>
+        <div class="tw"><table class="mx" id="mxTbl"></table></div>
+      </div>
+      <div class="foot"><button class="btn pri" data-go="3">Tiếp: lập báo cáo sản xuất →</button></div>
+    </section>
+
+    <!-- STEP 3 -->
+    <section id="s3" role="tabpanel" aria-labelledby="step3" tabindex="-1" hidden>
+      <div class="head">
+        <div>
+          <h2>Bước 3 · Báo cáo sản xuất</h2>
+          <p class="sub">Nhân lực lấy từ báo cáo nhân sự của ngày đang chọn. Nhập mã hàng, giờ làm việc, sản lượng kế hoạch và thực tế cho từng line.</p>
+        </div>
+        <div class="row"><button class="btn" id="btnCopyProd">Sao chép báo cáo (dán vào Excel)</button></div>
+      </div>
+      <div class="kpis" id="prKpis"></div>
+      <div class="card">
+        <div class="tw"><table class="edit" id="prTbl"></table></div>
+        <div class="legend">
+          <div><code>% đạt</code> = Thực tế ÷ Kế hoạch sản lượng · <code>NS/người</code> = Thực tế ÷ Đi làm trực tiếp · <code>NS/người/giờ</code> = NS/người ÷ Giờ làm việc</div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Nhận xét</h3>
+        <ul class="notes" id="prNotes"></ul>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script src="./app.js"></script>
+
+
+</body>
+</html>
