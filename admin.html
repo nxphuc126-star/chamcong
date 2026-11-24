@@ -1,0 +1,7 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Admin · Nhân Lực Line</title><link rel="stylesheet" href="./admin.css"></head>
+<body><main class="shell"><section id="login" class="panel login"><div class="brand">NL <span>ADMIN</span></div><h1>Đăng nhập quản trị</h1><p>Đăng nhập để chỉnh sửa nội dung các trang.</p><form id="loginForm"><label>Mật khẩu quản trị</label><input id="password" type="password" autocomplete="current-password" required><button>Đăng nhập</button><p id="loginError" class="error"></p></form></section>
+<section id="dashboard" hidden><header><div><div class="brand">NL <span>ADMIN PANEL</span></div><h1>Quản lý nội dung</h1><p>Chỉnh sửa thông báo hiển thị ở từng trang.</p></div><button id="logout" class="secondary">Đăng xuất</button></header>
+<nav><button data-tab="attendance" class="active">Bước 1 · Điểm danh</button><button data-tab="hr">Bước 2 · Nhân sự</button><button data-tab="production">Bước 3 · Sản xuất</button></nav>
+<section class="panel editor"><label for="notice">Thông báo / nội dung hướng dẫn</label><textarea id="notice" rows="8" placeholder="Nhập nội dung hiển thị trên trang..."></textarea><div class="actions"><span id="status">Đang tải...</span><button id="save">Lưu thay đổi</button></div></section>
+</section></main><script src="./admin.js"></script></body></html>
