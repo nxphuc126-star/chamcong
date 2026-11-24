@@ -111,6 +111,17 @@
         </div>
         <div class="row"><button class="btn" id="btnCopyHR">Sao chép báo cáo (dán vào Excel)</button></div>
       </div>
+      <div class="card" id="employeeDirectory">
+        <div class="head">
+          <div><h3>Danh sách nhân sự</h3><p class="sub" id="employeeStatus">Chưa nhập file nhân sự. Chọn file Excel để tải danh sách vào trình duyệt này.</p></div>
+          <div class="row"><label class="btn pri" for="employeeImport">Nhập file nhân sự</label><input id="employeeImport" type="file" accept=".xlsx,.xls,.csv" hidden></div>
+        </div>
+        <div class="row" style="gap:10px;flex-wrap:wrap">
+          <input id="employeeSearch" class="field" type="search" placeholder="Tìm mã NV, tên, line..." aria-label="Tìm nhân sự">
+          <span class="status" id="employeeCount"></span>
+        </div>
+        <div class="tw"><table id="employeeTbl"></table></div>
+      </div>
       <div class="kpis" id="hrKpis"></div>
       <div class="card">
         <div class="tw"><table id="hrTbl"></table></div>
