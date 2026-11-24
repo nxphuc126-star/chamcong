@@ -222,3 +222,40 @@ td.txt{min-width:135px;max-width:220px;font-size:11.5px}
 
 /* Respect hidden panels: section{display:grid} otherwise overrides the browser's hidden rule. */
 section[hidden]{display:none!important}
+
+
+/* Smooth cross-page navigation (Chrome / Edge supporting View Transitions) */
+@view-transition {
+  navigation: auto;
+}
+.sidebar { view-transition-name: app-sidebar; }
+.top { view-transition-name: app-topbar; }
+main { view-transition-name: app-page-content; }
+::view-transition-old(app-page-content) {
+  animation: page-out 150ms ease both;
+}
+::view-transition-new(app-page-content) {
+  animation: page-in 260ms cubic-bezier(.2,.75,.25,1) both;
+}
+::view-transition-old(app-sidebar),
+::view-transition-new(app-sidebar),
+::view-transition-old(app-topbar),
+::view-transition-new(app-topbar) {
+  animation-duration: 180ms;
+  animation-timing-function: ease;
+}
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(9px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes page-out {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-4px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation-duration: 1ms !important;
+  }
+}
