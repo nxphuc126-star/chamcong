@@ -259,3 +259,8 @@ main { view-transition-name: app-page-content; }
     animation-duration: 1ms !important;
   }
 }
+
+#employeeDirectory .field{min-width:220px;max-width:360px;padding:9px 12px;border:1px solid var(--line,#334155);border-radius:9px;background:var(--panel,#151d29);color:inherit;font:inherit}
+#employeeDirectory .tw{max-height:48vh}
+#employeeDirectory table{min-width:850px}
+#employeeDirectory th{position:sticky;top:0;z-index:2}
