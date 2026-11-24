@@ -513,6 +513,7 @@ async function loadAdminPageNotice(){
     const r=await fetch("/api/page-content",{cache:"no-store"});
     if(!r.ok)return;
     const data=await r.json();
+    if(Array.isArray(data?.employees)){EMPLOYEES=data.employees;try{localStorage.setItem(EMPKEY,JSON.stringify(EMPLOYEES))}catch(e){}renderEmployeeDirectory()}
     if(data?.appData&&typeof data.appData==="object"&&data.appData.days){
       S=Object.assign({days:{},cur:null,prod:{},meta:{dept:"ASSY"},sample:false,source:""},data.appData);
       if(S.cur&&!S.days[S.cur])S.cur=dayKeys().pop()||null;
